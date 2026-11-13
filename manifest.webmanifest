@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "Our House",
+  "short_name": "Our House",
+  "description": "Remember your things. Make a simple plan for your day.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FBF6EE",
+  "theme_color": "#0F5C4C",
+  "icons": [
+    {"src":"./icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"./icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}

@@ -1,0 +1,4 @@
+node_modules/
+.env*
+# firebase-config.js is the public Firebase web client config and ships with the hosted app.
+# Never add service-account JSON, private keys, tokens, .env secrets, or Admin SDK credentials.

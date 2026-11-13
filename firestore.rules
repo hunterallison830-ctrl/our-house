@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function householdAccess(house) {
+      // A six-digit invitation is deliberately simple, NOT strong authentication.
+      // Do not use this sample for sensitive information. See README security notes.
+      return request.auth != null && house.matches('^[1-9][0-9]{5}$') && house != '123456';
+    }
+    function baseRecord(id) {
+      let r = request.resource.data;
+      return r.id == id && r.updatedAt is int && r.updatedAt > 0
+        && r.writer is string && r.writer.size() <= 80 && r.deleted is bool;
+    }
+    function validItem(id) {
+      let r = request.resource.data;
+      return baseRecord(id)
+        && r.keys().hasOnly(['id','updatedAt','writer','deleted','name','location','photo'])
+        && r.name is string && r.name.size() > 0 && r.name.size() <= 120
+        && r.location is string && r.location.size() > 0 && r.location.size() <= 120
+        && r.photo is string && r.photo.size() <= 125000;
+    }
+    function validEvent(id) {
+      let r = request.resource.data;
+      return baseRecord(id)
+        && r.keys().hasOnly(['id','updatedAt','writer','deleted','title','date','timeType','time','repeat'])
+        && r.title is string && r.title.size() > 0 && r.title.size() <= 120
+        && r.date is string && r.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && r.timeType in ['all','morning','afternoon','evening','specific']
+        && r.time is string && r.time.size() <= 5 && r.repeat in ['once','daily','weekly'];
+    }
+    function validCompletion(id) {
+      let r = request.resource.data;
+      return baseRecord(id)
+        && r.keys().hasOnly(['id','updatedAt','writer','deleted','eventId','date','done'])
+        && r.eventId is string && r.eventId.size() <= 100
+        && r.date is string && r.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') && r.done is bool;
+    }
+    match /households/{house}/items/{id} {
+      allow read: if householdAccess(house);
+      allow create, update: if householdAccess(house) && validItem(id);
+    }
+    match /households/{house}/events/{id} {
+      allow read: if householdAccess(house);
+      allow create, update: if householdAccess(house) && validEvent(id);
+    }
+    match /households/{house}/completions/{id} {
+      allow read: if householdAccess(house);
+      allow create, update: if householdAccess(house) && validCompletion(id);
+    }
+    // No collection-wide household listing or physical deletes. Use tombstones.
+  }
+}
