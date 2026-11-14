@@ -2,7 +2,7 @@ import {spawnSync} from 'node:child_process';
 import fs from 'node:fs/promises';
 const directory='/workspace/our-house-shots';
 const failures=[];
-for(const script of ['tests/e2e.mjs','tests/sharing.mjs']){
+for(const script of ['tests/remember.mjs','tests/e2e.mjs','tests/sharing.mjs']){
  const result=spawnSync(process.execPath,[script],{stdio:'inherit',env:process.env});
  if(result.status!==0)failures.push(script);
 }

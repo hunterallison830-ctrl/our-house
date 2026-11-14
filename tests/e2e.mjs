@@ -6,6 +6,7 @@ const shots='/workspace/our-house-shots';
 await fs.mkdir(shots,{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
 const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,isMobile:true,hasTouch:true,timezoneId:'America/New_York',reducedMotion:'reduce'});
+await context.route('**/firebase-config.js',route=>route.fulfill({status:404,body:''}));
 const page=await context.newPage();
 const results=[],errors=[];
 page.on('pageerror',err=>errors.push(String(err)));

@@ -1,7 +1,50 @@
 // One persisted snapshot per house. All writes finish on this phone before UI confirmation.
 const DB_NAME = 'our-house-v1';
-const clientId = localStorage.getItem('our-house-client') || crypto.randomUUID();
-localStorage.setItem('our-house-client', clientId);
+const HOUSE_KEY = 'our-house-number';
+const CLIENT_KEY = 'our-house-client';
+function storageGet(key) {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function storageSet(key, value) {
+  try { localStorage.setItem(key, value); return true; } catch { return false; }
+}
+function cookiePath() {
+  let path = location.pathname || '/';
+  if (!path.endsWith('/')) {
+    const last = path.split('/').pop();
+    path = /\.[A-Za-z0-9]+$/.test(last) ? path.slice(0, path.length - last.length) : path + '/';
+  }
+  return path || '/';
+}
+function cookieGet(name) {
+  try {
+    const prefix = name + '=';
+    for (const part of document.cookie.split(';')) {
+      const piece = part.trim();
+      if (piece.startsWith(prefix)) return decodeURIComponent(piece.slice(prefix.length));
+    }
+  } catch {}
+  return null;
+}
+function cookieSet(name, value) {
+  try {
+    const secure = location.protocol === 'https:' ? ';Secure' : '';
+    document.cookie = `${name}=${encodeURIComponent(value)};Max-Age=315360000;Path=${cookiePath()};SameSite=Lax${secure}`;
+    return true;
+  } catch { return false; }
+}
+export function rememberedHouse() {
+  const raw = storageGet(HOUSE_KEY) || cookieGet(HOUSE_KEY) || '';
+  return /^\d{6}$/.test(raw) ? raw : '';
+}
+export function rememberHouse(id) {
+  if (!/^\d{6}$/.test(id)) return;
+  storageSet(HOUSE_KEY, id);
+  cookieSet(HOUSE_KEY, id);
+}
+const clientId = storageGet(CLIENT_KEY) || cookieGet(CLIENT_KEY) || crypto.randomUUID();
+storageSet(CLIENT_KEY, clientId);
+cookieSet(CLIENT_KEY, clientId);
 let db, house = '', data = blank(), pending = {}, subscribers = [], clock = 0;
 let writeChain = Promise.resolve();
 function blank() { return {items: {}, events: {}, completions: {}}; }
@@ -22,11 +65,11 @@ async function readSnapshot(id) {
     const database = await openDB();
     return await new Promise((resolve, reject) => {
       const r = database.transaction('houses').objectStore('houses').get(id);
-      r.onsuccess = () => resolve(r.result || JSON.parse(localStorage.getItem(`our-house-data-${id}`) || 'null'));
+      r.onsuccess = () => resolve(r.result || JSON.parse(storageGet(`our-house-data-${id}`) || 'null'));
       r.onerror = () => reject(r.error);
     });
   } catch {
-    return JSON.parse(localStorage.getItem(`our-house-data-${id}`) || 'null');
+    return JSON.parse(storageGet(`our-house-data-${id}`) || 'null');
   }
 }
 async function persist() {
@@ -40,7 +83,7 @@ async function persist() {
         tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
       });
     } catch {
-      localStorage.setItem(`our-house-data-${id}`, JSON.stringify(value));
+      storageSet(`our-house-data-${id}`, JSON.stringify(value));
     }
   };
   writeChain = writeChain.catch(() => {}).then(job);
@@ -57,7 +100,7 @@ export const store = {
     const saved = await readSnapshot(id);
     data = saved?.data || blank(); pending = saved?.pending || {};
     for (const group of Object.values(data)) for (const record of Object.values(group)) clock = Math.max(clock, record.updatedAt || 0);
-    localStorage.setItem('our-house-number', id);
+    rememberHouse(id);
     notify();
   },
   subscribe(fn) { subscribers.push(fn); return () => { subscribers = subscribers.filter(x => x !== fn); }; },

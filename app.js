@@ -1,4 +1,4 @@
-import {store, normalize} from './storage.js';
+import {store, normalize, rememberedHouse} from './storage.js';
 import {startSharing, sharingStatus} from './sync.js';
 import {today, shiftDay, dateWords, greeting, occurs, timeRank, timeWords, repeatWords, itemId, compressPhoto} from './domain.js';
 const app = document.querySelector('#app');
@@ -230,8 +230,8 @@ window.addEventListener('sharing-status',()=>{const el=document.querySelector('#
 // Refresh the date at midnight in New York, without interrupting a question.
 let lastToday=today();setInterval(()=>{const now=today();if(now!==lastToday){if(viewDate===lastToday)viewDate=now;lastToday=now;if(['home','plan'].includes(screen))render();}},30000);
 async function init(){
-  const id=localStorage.getItem('our-house-number');
-  if(id&&/^\d{6}$/.test(id)){await store.open(id);screen='home';startSharing();}
+  const id=rememberedHouse();
+  if(id){await store.open(id);screen='home';startSharing();}
   window.history.replaceState({screen},'',`#${screen}`);render();
   if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
